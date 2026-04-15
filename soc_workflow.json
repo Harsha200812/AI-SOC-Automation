@@ -1,0 +1,420 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "splunk-alert",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "ae786373-2cb9-4ad2-906c-6d99d339ee60",
+      "name": "Webhook",
+      "webhookId": "77d9ecd1-8ae2-41ef-a963-1e1d8c9d92e5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4f6ed382-012e-4e4b-99e2-01e8018925c1",
+              "leftValue": "={{ Number($json[\"body\"][\"result\"][\"failed_attempts\"]) }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        96,
+        0
+      ],
+      "id": "df03f594-8297-466a-bd4d-2750a0362552",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        -112
+      ],
+      "id": "10858d31-0ae9-4e1f-b00e-52c26bd084e6",
+      "name": "Wait",
+      "webhookId": "0782c83b-b164-4420-b33f-26fbfa8a9e86"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a SOC analyst.\n\nAnalyze this alert:\n\nComputer: {{$json.Computer}}\nUser: {{$json.User}}\nSource IP: {{$json.IP}}\nFailed Attempts: {{$json.Attempts}}\nAbuse Score: {{$json.AbuseScore}}\n\nGive SHORT answer only (max 4 lines).\n\nFormat:\n\nThreat Type:\nRisk Level:\nSummary:\nRecommended Action:",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        832,
+        -16
+      ],
+      "id": "ac3354f1-4513-448c-a3a6-4d70d7ba9d8b",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "meta-llama/llama-3-8b-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        624,
+        128
+      ],
+      "id": "61bd1812-01a4-4296-8c3f-600d6df020d4",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "1H8QoFot2yznE6Ij",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5708806706",
+        "text": "=🚨 SOC ALERT DETECTED\n\nComputer: {{$json.Computer}}\nUser: {{$json.User}}\nSource IP: {{$json.IP}}\nFailed Attempts: {{$json.Attempts}}\n\n{{$json.text}}\n\nThis message was sent automatically with n8n",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        -48
+      ],
+      "id": "94c43937-5450-4a1a-b61d-06c25bbf9935",
+      "name": "Send a text message",
+      "webhookId": "06451594-e23a-41ce-a5d6-4c90d0b228f9",
+      "credentials": {
+        "telegramApi": {
+          "id": "MyWDbS6qHJzqH9AP",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.abuseipdb.com/api/v2/check",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ipAddress",
+              "value": "={{$json.IP}}"
+            },
+            {
+              "name": "=maxAgeInDays",
+              "value": "90"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Key",
+              "value": "=81a339757f488f673f4ea157765cbe2865233ca517cc4575c201e7dfed980b25cb985e494dfd5559"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 5000,
+          "sendCredentialsOnCrossOriginRedirect": false
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        368,
+        0
+      ],
+      "id": "39b5fd05-3fbc-42f3-9bbe-0bb6e04c8ed4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ece8965d-852f-48e3-89a1-3637fec54889",
+              "name": "Computer",
+              "value": "={{$node[\"Edit Fields1\"].json[\"Computer\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "baea51f0-b9ae-42d9-aee5-60d0b9a824b0",
+              "name": "User",
+              "value": "={{$node[\"Edit Fields1\"].json[\"User\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "d1c21d87-1c1d-409d-9b08-579ad3f35910",
+              "name": "IP",
+              "value": "={{$node[\"Edit Fields1\"].json[\"IP\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "0f05fa69-f08e-4b76-aab1-f31cd27ad0a2",
+              "name": "Attempts",
+              "value": "={{$node[\"Edit Fields1\"].json[\"Attempts\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "bfc09275-e930-4ac0-94c7-ce44896c8cad",
+              "name": "AbuseScore",
+              "value": "={{$json.data.abuseConfidenceScore}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        -208
+      ],
+      "id": "061a5a4d-165e-4556-a0db-91630619bb0d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9eab2e47-0869-4903-8dd6-89c70a76d013",
+              "name": "Computer",
+              "value": "={{$json.body.result.ComputerName}}",
+              "type": "string"
+            },
+            {
+              "id": "d9664b13-9600-4e0c-877c-5ccf97fae14c",
+              "name": "User",
+              "value": "={{$json.body.result.Account_Name}}",
+              "type": "string"
+            },
+            {
+              "id": "1e952915-2f73-4035-add2-e472ed64df05",
+              "name": "IP",
+              "value": "={{$json.body.result.Source_Network_Address}}",
+              "type": "string"
+            },
+            {
+              "id": "ce38f432-94bd-4475-8814-d1c290ae6782",
+              "name": "Attempts",
+              "value": "={{$json.body.result.failed_attempts}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        -176
+      ],
+      "id": "4de84a69-f900-4119-9a44-ee9744d7b07a",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "07320a84-76b0-4124-af9f-b5250096453a",
+              "name": "Computer",
+              "value": "={{$node[\"Wait\"].json[\"Computer\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "2c15f4a2-a780-4d42-b99d-d64ec2177d78",
+              "name": "User",
+              "value": "={{$node[\"Wait\"].json[\"User\"]}}\n",
+              "type": "string"
+            },
+            {
+              "id": "3c72b117-0b94-4d91-b406-38359cfff6b7",
+              "name": "IP",
+              "value": "={{$node[\"Wait\"].json[\"IP\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "0e7ed732-f066-46de-956f-0e2edeaa8705",
+              "name": "Attempts",
+              "value": "={{$node[\"Wait\"].json[\"Attempts\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "a5708592-84f7-416d-b20f-a1e2ae0581d1",
+              "name": "text (LLM output)",
+              "value": "={{$json.text}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        -224
+      ],
+      "id": "d05e3480-1b74-4b98-bd94-9bddeb7a4b2a",
+      "name": "Edit Fields2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "aa89b62b-64dc-4b8e-af77-017a25257cd9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f29a7fe08d6ca930cb8dfdf6dfa32bf56e1f7740a7a861043e1dfee6af627bd"
+  },
+  "id": "joEWI9GjfI5SxkQI",
+  "tags": []
+}
